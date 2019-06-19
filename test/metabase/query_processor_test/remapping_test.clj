@@ -2,7 +2,7 @@
   "Tests for the remapping results"
   (:require [metabase
              [query-processor :as qp]
-             [query-processor-test :as qp.test :refer :all]]
+             [query-processor-test :as qp.test]]
             [metabase.models
              [dimension :refer [Dimension]]
              [field :refer [Field]]]
@@ -13,7 +13,7 @@
             [metabase.test.data.datasets :as datasets]
             [toucan.db :as db]))
 
-(qp-expect-with-all-drivers
+(qp.test/qp-expect-with-all-drivers
   {:rows        [["20th Century Cafe"               12 "Café"]
                  ["25°"                             11 "Burger"]
                  ["33 Taps"                          7 "Bar"]
@@ -21,8 +21,8 @@
    :columns     [(data/format-name "name")
                  (data/format-name "category_id")
                  "Foo"]
-   :cols        [(venues-col :name)
-                 (assoc (venues-col :category_id) :remapped_to "Foo")
+   :cols        [(qp.test/col :venues :name)
+                 (assoc (qp.test/col :venues :category_id) :remapped_to "Foo")
                  (#'add-dimension-projections/create-remapped-col "Foo" (data/format-name "category_id"))]
    :native_form true}
   (data/with-temp-objects
@@ -55,17 +55,17 @@
                    (fn [rows]
                      (map #(mapv % col-indexes) rows))))))
 
-(datasets/expect-with-drivers (non-timeseries-drivers-with-feature :foreign-keys)
+(datasets/expect-with-drivers (qp.test/non-timeseries-drivers-with-feature :foreign-keys)
   {:rows        [["20th Century Cafe"               2 "Café"]
                  ["25°"                             2 "Burger"]
                  ["33 Taps"                         2 "Bar"]
                  ["800 Degrees Neapolitan Pizzeria" 2 "Pizza"]]
-   :columns     [(:name (venues-col :name))
-                 (:name (venues-col :price))
+   :columns     [(:name (qp.test/col :venues :name))
+                 (:name (qp.test/col :venues :price))
                  (data/format-name "name_2")]
-   :cols        [(venues-col :name)
-                 (venues-col :price)
-                 (assoc (categories-col :name)
+   :cols        [(qp.test/col :venues :name)
+                 (qp.test/col :venues :price)
+                 (assoc (qp.test/col :categories :name)
                    :fk_field_id   (data/id :venues :category_id)
                    :display_name  "Foo"
                    :name          (data/format-name "name_2")
@@ -80,20 +80,20 @@
          (qp.test/format-rows-by [int str int double double int str])
          (select-columns (set (map data/format-name ["name" "price" "name_2"])))
          tu/round-fingerprint-cols
-         data)))
+         qp.test/data)))
 
 ;; Check that we can have remappings when we include a `:fields` clause that restricts the query fields returned
-(datasets/expect-with-drivers (non-timeseries-drivers-with-feature :foreign-keys)
+(datasets/expect-with-drivers (qp.test/non-timeseries-drivers-with-feature :foreign-keys)
   {:rows        [["20th Century Cafe"               2 "Café"]
                  ["25°"                             2 "Burger"]
                  ["33 Taps"                         2 "Bar"]
                  ["800 Degrees Neapolitan Pizzeria" 2 "Pizza"]]
-   :columns     [(:name (venues-col :name))
-                 (:name (venues-col :price))
+   :columns     [(:name (qp.test/col :venues :name))
+                 (:name (qp.test/col :venues :price))
                  (data/format-name "name_2")]
-   :cols        [(venues-col :name)
-                 (venues-col :price)
-                 (assoc (categories-col :name)
+   :cols        [(qp.test/col :venues :name)
+                 (qp.test/col :venues :price)
+                 (assoc (qp.test/col :categories :name)
                    :fk_field_id   (data/id :venues :category_id)
                    :display_name  "Foo"
                    :name          (data/format-name "name_2")
@@ -112,7 +112,7 @@
          :data)))
 
 ;; Test that we can remap inside an MBQL nested query
-(datasets/expect-with-drivers (non-timeseries-drivers-with-feature :foreign-keys :nested-queries)
+(datasets/expect-with-drivers (qp.test/non-timeseries-drivers-with-feature :foreign-keys :nested-queries)
   ["Kinaree Thai Bistro" "Ruen Pair Thai Restaurant" "Yamashiro Hollywood" "Spitz Eagle Rock" "The Gumbo Pot"]
   (data/with-temp-objects
     (fn []
@@ -123,12 +123,12 @@
     (->> (data/run-mbql-query checkins
            {:order-by [[:asc $date]]
             :limit    5})
-         rows
+         qp.test/rows
          (map last))))
 
 ;; Test a remapping with conflicting names, in the case below there are two name fields, one from Venues and the other
 ;; from Categories
-(datasets/expect-with-drivers (non-timeseries-drivers-with-feature :foreign-keys :nested-queries)
+(datasets/expect-with-drivers (qp.test/non-timeseries-drivers-with-feature :foreign-keys :nested-queries)
   ["20th Century Cafe" "25°" "33 Taps" "800 Degrees Neapolitan Pizzeria"]
   (data/with-temp-objects
     (data/create-venue-category-fk-remapping "Foo")
@@ -138,7 +138,7 @@
             :query {:source-table (data/id :venues)
                     :order-by [[(data/id :venues :name) :ascending]]
                     :limit 4}})
-         rows
+         qp.test/rows
          (map second))))
 
 ;; Test out a self referencing column. This has a users table like the one that is in `test-data`, but also includes a
@@ -147,7 +147,7 @@
 ;;
 ;; Having a self-referencing FK is currently broken with the Redshift and Oracle backends. The issue related to fix
 ;; this is https://github.com/metabase/metabase/issues/8510
-(datasets/expect-with-drivers (disj (non-timeseries-drivers-with-feature :foreign-keys) :redshift :oracle :vertica)
+(datasets/expect-with-drivers (disj (qp.test/non-timeseries-drivers-with-feature :foreign-keys) :redshift :oracle :vertica)
   ["Dwight Gresham" "Shad Ferdynand" "Kfir Caj" "Plato Yeshua"]
   (data/dataset test-data-self-referencing-user
     (data/with-temp-objects
@@ -163,5 +163,5 @@
       (->> (data/run-mbql-query users
              {:order-by [[:asc $name]]
               :limit    4})
-           rows
+           qp.test/rows
            (map last)))))

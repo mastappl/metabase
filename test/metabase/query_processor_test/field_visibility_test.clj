@@ -21,11 +21,11 @@
       set))
 
 (qp.test/expect-with-non-timeseries-dbs
-  (u/key-by :id (qp.test/venues-cols))
+  (u/key-by :id (qp.test/expected-cols :venues))
   (u/key-by :id (venues-cols-from-query)))
 
 (qp.test/expect-with-non-timeseries-dbs
-  (u/key-by :id (for [col (qp.test/venues-cols)]
+  (u/key-by :id (for [col (qp.test/expected-cols :venues)]
                   (if (= (data/id :venues :price) (u/get-id col))
                     (assoc col :visibility_type :details-only)
                     col)))
@@ -38,9 +38,7 @@
 ;;; Make sure :sensitive information fields are never returned by the QP
 (qp.test/qp-expect-with-all-drivers
   {:columns     (qp.test/->columns "id" "name" "last_login")
-   :cols        [(qp.test/users-col :id)
-                 (qp.test/users-col :name)
-                 (qp.test/users-col :last_login)]
+   :cols        (qp.test/cols :users [:id :name :last_login])
    :rows        [[ 1 "Plato Yeshua"]
                  [ 2 "Felipinho Asklepios"]
                  [ 3 "Kaneonuskatew Eiran"]

@@ -129,11 +129,11 @@
   ;; TODO - WHAT DOES THIS DO?
   :manifest
   {"Liquibase-Package"
-   #=(eval
-      (str "liquibase.change,liquibase.changelog,liquibase.database,liquibase.parser,liquibase.precondition,"
-           "liquibase.datatype,liquibase.serializer,liquibase.sqlgenerator,liquibase.executor,"
-           "liquibase.snapshot,liquibase.logging,liquibase.diff,liquibase.structure,"
-           "liquibase.structurecompare,liquibase.lockservice,liquibase.sdk,liquibase.ext"))}
+   #= (eval
+       (str "liquibase.change,liquibase.changelog,liquibase.database,liquibase.parser,liquibase.precondition,"
+            "liquibase.datatype,liquibase.serializer,liquibase.sqlgenerator,liquibase.executor,"
+            "liquibase.snapshot,liquibase.logging,liquibase.diff,liquibase.structure,"
+            "liquibase.structurecompare,liquibase.lockservice,liquibase.sdk,liquibase.ext"))}
 
   :jvm-opts
   ["-XX:+IgnoreUnrecognizedVMOptions"                                 ; ignore things not recognized for our Java version instead of refusing to start
@@ -156,7 +156,7 @@
      [ring/ring-mock "0.3.2"]]
 
     :plugins
-    [[lein-environ "1.1.0"]]                                          ; easy access to environment variables
+    [[lein-environ "1.1.0"]] ; easy access to environment variables
 
     :env      {:mb-run-mode "dev"}
     :jvm-opts ["-Dlogfile.path=target/log"]}
@@ -246,22 +246,21 @@
      [[jonase/eastwood "0.3.1" :exclusions [org.clojure/clojure]]]
 
      :eastwood
-     {:exclude-namespaces [:test-paths]
-      :config-files       ["./test_resources/eastwood-config.clj"]
-      :add-linters        [:unused-private-vars
-                           :unused-namespaces
-                           ;; These linters are pretty useful but give a few false positives and can't be selectively
-                           ;; disabled (yet)
-                           ;;
-                           ;; For example see https://github.com/jonase/eastwood/issues/193
-                           ;
-                           ;; It's still useful to re-enable them and run them every once in a while because they catch
-                           ;; a lot of actual errors too. Keep an eye on the issue above and re-enable them if we can
-                           ;; get them to work
-                           #_:unused-fn-args
-                           #_:unused-locals]
+     {:config-files    ["./test_resources/eastwood-config.clj"]
+      :add-linters     [:unused-private-vars
+                        :unused-namespaces
+                        ;; These linters are pretty useful but give a few false positives and can't be selectively
+                        ;; disabled (yet)
+                        ;;
+                        ;; For example see https://github.com/jonase/eastwood/issues/193
+                        ;;
+                        ;; It's still useful to re-enable them and run them every once in a while because they catch
+                        ;; a lot of actual errors too. Keep an eye on the issue above and re-enable them if we can
+                        ;; get them to work
+                        #_:unused-fn-args
+                        #_:unused-locals]
       ;; Turn this off temporarily until we finish removing self-deprecated functions & macros
-      :exclude-linters    [:deprecations]}}]
+      :exclude-linters [:deprecations]}}]
 
    ;; run `lein check-reflection-warnings` to check for reflection warnings
    :reflection-warnings
@@ -309,7 +308,7 @@
    ;; Profile Metabase start time with `lein profile`
    :profile
    {:jvm-opts ["-XX:+CITime"                                          ; print time spent in JIT compiler
-               "-XX:+PrintGC"]}                                       ; print a message when garbage collection takes place
+               "-XX:+PrintGC"]} ; print a message when garbage collection takes place
 
    ;; get the H2 shell with 'lein h2'
    :h2-shell

@@ -17,8 +17,8 @@
                  ["Krua Siri"                     9]
                  ["Fred 62"                      10]]
    :columns     (qp.test/->columns "name" "id")
-   :cols        [(qp.test/venues-col :name)
-                 (qp.test/venues-col :id)]
+   :cols        [(qp.test/col :venues :name)
+                 (qp.test/col :venues :id)]
    :native_form true}
   (->> (data/run-mbql-query venues
          {:fields   [$name $id]

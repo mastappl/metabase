@@ -141,39 +141,44 @@
 ;; test that added information about aggregations looks the way we'd expect
 (defn- aggregation-name [ag-clause]
   (binding [driver/*driver* :h2]
-    (annotate/aggregation-name ag-clause)))
+    (qp.test-util/with-everything-store
+      (annotate/aggregation-name ag-clause))))
 
 (expect
   "count"
   (aggregation-name [:count]))
 
 (expect
-  "count"
-  (aggregation-name [:distinct [:field-id 1]]))
+  "distinct count of ID"
+  (aggregation-name [:distinct [:field-id (data/id :venues :id)]]))
 
 (expect
-  "sum"
-  (aggregation-name [:sum [:field-id 1]]))
+  "sum of ID"
+  (aggregation-name [:sum [:field-id (data/id :venues :id)]]))
 
 (expect
   "count + 1"
   (aggregation-name [:+ [:count] 1]))
 
 (expect
-  "min + (2 * avg)"
-  (aggregation-name [:+ [:min [:field-id 1]] [:* 2 [:avg [:field-id 2]]]]))
+  "minimum value of ID + (2 * average of Price)"
+  (aggregation-name
+   [:+
+    [:min [:field-id (data/id :venues :id)]]
+    [:* 2 [:avg [:field-id (data/id :venues :price)]]]]))
 
 (expect
-  "min + (2 * avg * 3 * (max - 4))"
-  (aggregation-name [:+
-                     [:min [:field-id 1]]
-                     [:*
-                      2
-                      [:avg [:field-id 2]]
-                      3
-                      [:-
-                       [:max [:field-id 3]]
-                       4]]]))
+  "minimum value of ID + (2 * average of Price * 3 * (maximum value of Category ID - 4))"
+  (aggregation-name
+   [:+
+    [:min [:field-id (data/id :venues :id)]]
+    [:*
+     2
+     [:avg [:field-id (data/id :venues :price)]]
+     3
+     [:-
+      [:max [:field-id (data/id :venues :category_id)]]
+      4]]]))
 
 (expect
   "x"

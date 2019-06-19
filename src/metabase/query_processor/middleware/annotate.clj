@@ -150,6 +150,14 @@
     ;; otherwise for things like numbers just use that directly
     _ &match))
 
+(defn- ag-arg-name
+  "Name to use for an aggregation clause argument such as a Field when constructing the complete aggregation name."
+  [ag-arg]
+  (or (when (mbql.preds/Field? ag-arg)
+        (when-let [info (col-info-for-field-clause {} ag-arg)]
+          (some info [:display_name :name])))
+      (aggregation-name ag-arg)))
+
 (s/defn aggregation-name :- su/NonBlankString
   "Return an appropriate field *and* display name for an `:aggregation` subclause (an aggregation or
   expression). Takes an options map as schema won't support passing keypairs directly as a varargs. `{:top-level?
@@ -172,12 +180,26 @@
          (str/join (str " " (name operator) " ")
                    (map expression-ag-arg->name args)))
 
-    ;; for unnamed normal aggregations, the column alias is always the same as the ag type except for `:distinct` which
-    ;; is called `:count` (WHY?)
-    [:distinct _]
-    "count"
+    [:count]
+    (str (tru "count"))
 
-    ;; for any other aggregation just use the name of the clause e.g. `sum`
+    [:distinct    arg]      (str (tru "distinct count of {0}"     (ag-arg-name arg)))
+    [:count       arg]      (str (tru "count of {0}"              (ag-arg-name arg)))
+    [:avg         arg]      (str (tru "average of {0}"            (ag-arg-name arg)))
+    [:cum-count   arg]      (str (tru "cumulative count of {0}"   (ag-arg-name arg)))
+    [:cum-sum     arg]      (str (tru "cumulative sum of {0}"     (ag-arg-name arg)))
+    [:stddev      arg]      (str (tru "standard deviation of {0}" (ag-arg-name arg)))
+    [:sum         arg]      (str (tru "sum of {0}"                (ag-arg-name arg)))
+    [:min         arg]      (str (tru "minimum value of {0}"      (ag-arg-name arg)))
+    [:max         arg]      (str (tru "maximum value of {0}"      (ag-arg-name arg)))
+
+    ;; until we have a way to generate good names for filters we'll just have to say 'matching condition' for now
+    [:share       pred]     (str (tru "share of rows matching condition"))
+    [:count-where pred]     (str (tru "count of rows matching condition"))
+    [:sum-where   arg pred] (str (tru "sum of {0} matching condition" (ag-arg-name arg)))
+
+    ;; for any other aggregation just use the name of the clause e.g. `sum`. This is a fallback in case we add
+    ;; something but don't have anything for it yet above
     [clause-name & _]
     (name clause-name)))
 
