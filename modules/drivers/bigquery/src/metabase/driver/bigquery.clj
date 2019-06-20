@@ -237,22 +237,21 @@
      (let [^TableSchema schema (.getSchema response)
            parsers             (doall
                                 (for [^TableFieldSchema field (.getFields schema)
-                                      :let [parser-fn (type->parser (.getType field))]]
+                                      :let                    [parser-fn (type->parser (.getType field))]]
                                   (parser-fn *bigquery-timezone*)))
            columns             (for [column (table-schema->metabase-field-info schema)]
                                  (-> column
                                      (set/rename-keys {:base-type :base_type})
                                      (dissoc :database-type)))]
-       {:columns (map (comp u/keyword->qualified-name :name) columns)
-        :cols    columns
-        :rows    (for [^TableRow row (.getRows response)]
-                   (for [[^TableCell cell, parser] (partition 2 (interleave (.getF row) parsers))]
-                     (when-let [v (.getV cell)]
-                       ;; There is a weird error where everything that *should* be NULL comes back as an Object.
-                       ;; See https://jira.talendforge.org/browse/TBD-1592
-                       ;; Everything else comes back as a String luckily so we can proceed normally.
-                       (when-not (= (class v) Object)
-                         (parser v)))))}))))
+       {:cols columns
+        :rows (for [^TableRow row (.getRows response)]
+                (for [[^TableCell cell, parser] (partition 2 (interleave (.getF row) parsers))]
+                  (when-let [v (.getV cell)]
+                    ;; There is a weird error where everything that *should* be NULL comes back as an Object.
+                    ;; See https://jira.talendforge.org/browse/TBD-1592
+                    ;; Everything else comes back as a String luckily so we can proceed normally.
+                    (when-not (= (class v) Object)
+                      (parser v)))))}))))
 
 (defn- process-native* [database query-string]
   {:pre [(map? database) (map? (:details database))]}

@@ -356,20 +356,15 @@
 
   ([driver aggregation-type {field-id :id, :keys [base_type special_type table_id]}]
    {:pre [base_type special_type]}
-   (merge
-    {:base_type    base_type
-     :special_type special_type
-     :settings     nil
-     :name         (name aggregation-type)
-     :display_name (qp.store/with-store
-                     (qp.store/fetch-and-store-database! (db/select-one-field :db_id Table :id table_id))
-                     (qp.store/fetch-and-store-fields! [field-id])
-                     (driver/with-driver driver
-                       (annotate/aggregation-name [aggregation-type [:field-id field-id]])))
-     :source       :aggregation}
-    ;; count always gets the same special type regardless
-    (when (= aggregation-type :count)
-      (aggregate-column-info driver :count)))))
+   (driver/with-driver driver
+     (qp.store/with-store
+       (qp.store/fetch-and-store-database! (db/select-one-field :db_id Table :id table_id))
+       (qp.store/fetch-and-store-fields! [field-id])
+       (merge
+        (annotate/col-info-for-aggregation-clause {} [aggregation-type [:field-id field-id]])
+        {:source :aggregation}
+        (when (#{:count :cum-count} aggregation-type)
+          {:base_type :type/Integer, :special_type :type/Number}))))))
 
 
 ;;; +----------------------------------------------------------------------------------------------------------------+

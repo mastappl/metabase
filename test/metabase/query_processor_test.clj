@@ -56,7 +56,11 @@
      ~expected
      ~actual))
 
-(defmacro qp-expect-with-all-drivers
+(defmacro ^:deprecated qp-expect-with-all-drivers
+  "Wraps `expected` form in the 'wrapped' query results (includes `:status` and `:row_count`.)
+
+  DEPRECATED -- If you don't care about `:status` and `:row_count` (you usually don't) use `qp.test/rows` or
+  `qp.test/rows-and-columns` instead."
   {:style/indent 0}
   [data query-form & post-process-fns]
   `(expect-with-non-timeseries-dbs
@@ -65,16 +69,6 @@
       :data      ~data}
      (-> ~query-form
          ~@post-process-fns)))
-
-;; TODO - this is only used in a single place, consider removing it
-(defmacro qp-expect-with-drivers
-  {:style/indent 1}
-  [drivers data query-form]
-  `(datasets/expect-with-drivers ~drivers
-     {:status    :completed
-      :row_count ~(count (:rows data))
-      :data      ~data}
-     ~query-form))
 
 ;; Predefinied Column Fns: These are meant for inclusion in the expected output of the QP tests, to save us from
 ;; writing the same results several times
@@ -96,7 +90,7 @@
    (db/select-one [Field :id :table_id :special_type :base_type :name :display_name :fingerprint]
      :id (data/id table-kw field-kw))))
 
-(defn expected-column-names
+(defn- expected-column-names
   "Get a sequence of keyword names of Fields belonging to a Table in the order they'd normally appear in QP results."
   [table-kw]
   (case table-kw
@@ -122,22 +116,6 @@
   ([table-kw cols]
    (mapv (partial col table-kw) cols)))
 
-(defn ->columns
-  "Generate the vector that should go in the `columns` part of a QP result; done by calling `format-name` against each
-  column name."
-  [& names]
-  (mapv (partial data/format-name) names))
-
-(defn expected-columns
-  "Get a sequence of all column names for a Table, as they'd normally appear in QP results `:columns`."
-  [table-kw]
-  (mapv data/format-name (expected-column-names table-kw)))
-
-(defn venues-columns
-  "Names of all columns for the `venues` table."
-  []
-  (->columns "id" "name" "category_id" "latitude" "longitude" "price"))
-
 (defn aggregate-col
   "Return the column information we'd expect for an aggregate column. For all columns besides `:count`, you'll need to
   pass the `Field` in question as well.
@@ -161,10 +139,11 @@
   ([table-kw field-kw]
    (breakout-col (col table-kw field-kw))))
 
-;; TODO - maybe this needs a new name now that it also removes the results_metadata
-(defn booleanize-native-form
+(defn ^:deprecated booleanize-native-form
   "Convert `:native_form` attribute to a boolean to make test results comparisons easier. Remove `data.results_metadata`
-  as well since it just takes a lot of space and the checksum can vary based on whether encryption is enabled."
+  as well since it just takes a lot of space and the checksum can vary based on whether encryption is enabled.
+
+  DEPRECATED: Just use `qp.test/rows` or `qp.test/row-and-cols` instead."
   [m]
   (-> m
       (update-in [:data :native_form] boolean)
@@ -254,13 +233,6 @@
   ([format-fns format-nil-values? response]
    (format-rows-by format-fns format-nil-values? (rows response))))
 
-(defn rows+column-names
-  "Return the result rows and column names from query `results`, or throw an Exception if they're missing."
-  {:style/indent 0}
-  [results]
-  {:rows    (rows results)
-   :columns (get-in results [:data :columns])})
-
 (defn first-row
   "Return the first row in the `results` of a query, or throw an Exception if they're missing."
   {:style/indent 0}
@@ -278,6 +250,20 @@
   [results]
   (or (some-> (data results) :cols vec)
       (throw (ex-info "Query does not have any :cols in results." results))))
+
+(defn rows-and-cols
+  "Return both `:rows` and `:cols` from the results. Equivalent to
+
+    {:rows (rows results), :cols (cols results)}"
+  {:style/indent 0}
+  [results]
+  {:rows (rows results), :cols (cols results)})
+
+(defn rows+column-names
+  "Return the result rows and column names from query `results`, or throw an Exception if they're missing."
+  {:style/indent 0}
+  [results]
+  {:rows (rows results), :columns (map :name (cols results))})
 
 (defn tz-shifted-driver-bug?
   "Returns true if `driver` is affected by the bug originally observed in
